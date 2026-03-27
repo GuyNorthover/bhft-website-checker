@@ -27,8 +27,10 @@ interface Analysis {
   robotsTxt: RobotsTxtAnalysis; structuredData: StructuredDataAnalysis
   clinicalInformation: ClinicalAnalysis; overallRisk: OverallRisk; scrapingProfile: ScrapingProfile
 }
+interface PageAnalysed { url: string; title: string; type: string }
 interface ScrapeResult {
-  url: string; title: string; robotsTxt: string | null; structuredData: object[]; analysis: Analysis
+  url: string; title: string; robotsTxt: string | null; structuredData: object[]
+  pagesAnalysed?: PageAnalysed[]; sitemapFound?: boolean; sitemapTotal?: number; analysis: Analysis
 }
 type RiskLevel = 'low' | 'medium' | 'high' | 'critical'
 
@@ -616,6 +618,22 @@ function AnalyserSection({
                   <p className="font-bold text-white mb-0.5 truncate">{result.title}</p>
                   <a href={result.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-sm font-mono break-all">{result.url}</a>
                   <p className="text-gray-300 text-sm leading-relaxed mt-4 border-l-2 border-gray-600 pl-4">{risk.summary}</p>
+                  {result.pagesAnalysed && result.pagesAnalysed.length > 0 && (
+                    <div className="mt-4 p-3 rounded-lg bg-white/5 border border-white/10">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                        {result.pagesAnalysed.length} pages crawled
+                        {result.sitemapFound && result.sitemapTotal ? ` · sitemap found (${result.sitemapTotal} total URLs)` : ''}
+                      </p>
+                      <ul className="space-y-1 max-h-36 overflow-y-auto">
+                        {result.pagesAnalysed.map((p, i) => (
+                          <li key={i} className="flex items-start gap-2 text-xs text-gray-400">
+                            <span className="text-gray-600 flex-shrink-0 w-4 text-right">{i + 1}.</span>
+                            <a href={p.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 truncate font-mono">{p.url}</a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
