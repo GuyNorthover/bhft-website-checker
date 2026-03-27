@@ -1,10 +1,6 @@
+node_modules
+dist
 .env
-*.env.local
-node_modules/
-dist/
-.vite/
-.vercel/
+.env.local
+.vercel
 *.log
-.DS_Store
-Thumbs.db
-*.tsbuildinfo
