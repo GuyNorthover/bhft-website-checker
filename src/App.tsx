@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { generateWordReport } from './generateReport'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -507,7 +508,20 @@ function AnalyserSection({
   url: string; setUrl: (v: string) => void; loading: boolean
   result: ScrapeResult | null; error: string | null; handleAnalyse: () => void
 }) {
+  const [downloading, setDownloading] = useState(false)
   const risk = result?.analysis.overallRisk
+
+  async function handleDownload() {
+    if (!result) return
+    setDownloading(true)
+    try {
+      await generateWordReport(result)
+    } catch (e) {
+      console.error('Download failed', e)
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   function riskBg(score: number) {
     if (score <= 3) return 'border-emerald-700 bg-emerald-900/20'
@@ -647,8 +661,28 @@ function AnalyserSection({
               </div>
             )}
 
-            <div className="text-center">
-              <button onClick={() => window.location.reload()} className="text-sm text-gray-600 hover:text-gray-300 underline underline-offset-2 transition-colors">
+            {/* Download + Analyse another */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="flex items-center gap-2.5 bg-white text-black font-bold px-8 py-3.5 rounded-xl hover:bg-gray-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-white/10 text-sm"
+              >
+                {downloading ? (
+                  <><Spinner />Generating Report...</>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Download Word Report (.docx)
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="text-sm text-gray-500 hover:text-gray-300 underline underline-offset-2 transition-colors"
+              >
                 Analyse another website
               </button>
             </div>
