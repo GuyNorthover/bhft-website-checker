@@ -76,20 +76,6 @@ function heading1(text: string) {
   })
 }
 
-function heading2(text: string) {
-  return new Paragraph({
-    text,
-    heading: HeadingLevel.HEADING_2,
-    spacing: { before: 300, after: 120 },
-  })
-}
-
-function heading3(text: string) {
-  return new Paragraph({
-    children: [new TextRun({ text, bold: true, size: 22, color: '1F2937' })],
-    spacing: { before: 200, after: 80 },
-  })
-}
 
 function bodyText(text: string) {
   return new Paragraph({
