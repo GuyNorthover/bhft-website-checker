@@ -1,7 +1,18 @@
 {
-  "functions": {
-    "api/scrape.js": {
-      "maxDuration": 60
+  "crons": [
+    {
+      "path": "/api/cron/crawl",
+      "schedule": "* * * * *"
     }
+  ],
+  "functions": {
+    "api/scrape.js": { "maxDuration": 60 },
+    "api/cron/crawl.js": { "maxDuration": 60 },
+    "api/jobs/start.js": { "maxDuration": 60 },
+    "api/jobs/status.js": { "maxDuration": 30 },
+    "api/jobs/list.js": { "maxDuration": 30 },
+    "api/checkout/create.js": { "maxDuration": 30 },
+    "api/checkout/verify.js": { "maxDuration": 30 },
+    "api/rewrite/page.js": { "maxDuration": 60 }
   }
 }

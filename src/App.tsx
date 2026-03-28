@@ -1,5 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { generateWordReport } from './generateReport'
+import FullSiteChecker from './FullSiteChecker'
+import PricingPage from './PricingPage'
+import { TierProvider, useTier } from './TierContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -711,14 +714,100 @@ function AnalyserSection({
   )
 }
 
-// ─── Main App ─────────────────────────────────────────────────────────────────
+// ─── Tab switcher ──────────────────────────────────────────────────────────────
 
-export default function App() {
+type AppTab = 'single' | 'full' | 'pricing'
+
+function TabSwitcher({ active, onChange }: { active: AppTab; onChange: (t: AppTab) => void }) {
+  const { tier } = useTier()
+  return (
+    <div className="border-b border-white/10 bg-black sticky top-14 z-40">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="flex items-center gap-1 py-1">
+          <button
+            onClick={() => onChange('single')}
+            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-all border-b-2 ${
+              active === 'single'
+                ? 'text-white border-white'
+                : 'text-gray-500 border-transparent hover:text-gray-300 hover:border-white/30'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Single Page Analysis
+          </button>
+          <button
+            onClick={() => onChange('full')}
+            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-all border-b-2 ${
+              active === 'full'
+                ? 'text-white border-white'
+                : 'text-gray-500 border-transparent hover:text-gray-300 hover:border-white/30'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+            </svg>
+            Full Site Analysis
+            {tier < 2 && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-400 border border-blue-700/50 font-normal">£150</span>}
+            {tier >= 2 && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-900/50 text-emerald-400 border border-emerald-700/50 font-normal">Active</span>}
+          </button>
+          <button
+            onClick={() => onChange('pricing')}
+            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-all border-b-2 ${
+              active === 'pricing'
+                ? 'text-white border-white'
+                : 'text-gray-500 border-transparent hover:text-gray-300 hover:border-white/30'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Pricing
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main App (inner, inside TierProvider) ────────────────────────────────────
+
+function AppInner() {
+  const [tab, setTab] = useState<AppTab>('single')
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ScrapeResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const toolRef = useRef<HTMLElement>(null)
+  const { setTier, isTestMode, tier } = useTier()
+
+  // On mount: handle Stripe success redirect (session_id in URL) and cancellation
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const sessionId = params.get('session_id')
+    const cancelled = params.get('cancelled')
+
+    if (sessionId) {
+      // Clean URL immediately
+      window.history.replaceState({}, '', window.location.pathname)
+      // Verify with backend
+      fetch(`/api/checkout/verify?session_id=${sessionId}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.valid && data.token) {
+            setTier(data.tier, data.token)
+            setTab('full')
+          }
+        })
+        .catch(() => {})
+    }
+
+    if (cancelled) {
+      window.history.replaceState({}, '', window.location.pathname)
+      setTab('pricing')
+    }
+  }, [setTier])
 
   function scrollToTool() {
     toolRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -746,17 +835,43 @@ export default function App() {
 
   return (
     <div className="bg-black min-h-screen">
-      <Nav onCTA={scrollToTool} />
-      <Hero onCTA={scrollToTool} />
-      <TheProblem />
-      <HowItWorks onCTA={scrollToTool} />
-      <AnalyserSection
-        toolRef={toolRef as React.RefObject<HTMLElement>}
-        url={url} setUrl={setUrl} loading={loading}
-        result={result} error={error} handleAnalyse={handleAnalyse}
-      />
-      <Testimonials />
-      <About />
+      {/* Test mode banner */}
+      {isTestMode && (
+        <div className="bg-amber-500/20 border-b border-amber-500/40 px-6 py-2.5">
+          <div className="max-w-6xl mx-auto">
+            <p className="text-amber-300 text-sm font-semibold text-center">
+              ⚠ Test Mode Active — Tier {tier} unlocked for testing. No payment was taken.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <Nav onCTA={() => { setTab('single'); scrollToTool() }} />
+      <TabSwitcher active={tab} onChange={setTab} />
+
+      {tab === 'single' ? (
+        <>
+          <Hero onCTA={() => { setTab('single'); scrollToTool() }} />
+          <TheProblem />
+          <HowItWorks onCTA={() => { setTab('single'); scrollToTool() }} />
+          <AnalyserSection
+            toolRef={toolRef as React.RefObject<HTMLElement>}
+            url={url} setUrl={setUrl} loading={loading}
+            result={result} error={error} handleAnalyse={handleAnalyse}
+          />
+          <Testimonials />
+          <About />
+        </>
+      ) : tab === 'full' ? (
+        <div className="bg-black min-h-screen pt-2">
+          <FullSiteChecker tier={tier} onUpgrade={() => setTab('pricing')} />
+        </div>
+      ) : (
+        <PricingPage
+          onGoToSingle={() => { setTab('single'); scrollToTool() }}
+          onGoToFull={() => setTab('full')}
+        />
+      )}
 
       {/* Footer */}
       <footer className="border-t border-white/10 bg-black py-8">
@@ -776,5 +891,15 @@ export default function App() {
         </div>
       </footer>
     </div>
+  )
+}
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
+
+export default function App() {
+  return (
+    <TierProvider>
+      <AppInner />
+    </TierProvider>
   )
 }
